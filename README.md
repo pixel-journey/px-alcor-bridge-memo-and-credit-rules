@@ -1,2 +1,20 @@
 # px-alcor-bridge-memo-and-credit-rules
-Educational Alcor Bridge memo shapes, deposit-address credit rules, and wrap.alcor vs legacy USDT. Pure TypeScript. Not a live bridge client.
+
+Educational pure TypeScript for **Alcor Bridge** integration patterns:
+
+- deposit-address **memo** shape (1–64 of `A-Za-z0-9._-:`)
+- **credit** only on a transfer from `bridge.alcor` with the expected memo
+- **Telos** payout memo: read only up to the first `|`
+- **wrap.alcor** vs legacy `usdt.alcor`
+- **Telos hub** route hops
+- forward fee ceiling **≤ 1%**
+
+```bash
+npm test
+```
+
+This is **not** a live bridge client. It does not call `POST /v1/deposit-addresses`, does not sign, and does not invent vault addresses. Live API: [docs.alcor.exchange/api/bridge](https://docs.alcor.exchange/api/bridge). Agent-oriented reference: [telos.alcor.exchange/api/bridge/docs](https://telos.alcor.exchange/api/bridge/docs).
+
+Curriculum index (private vault): `px-contract-examples-vault` → `docs/ALCOR-BRIDGE.md`.
+
+Prefer [WharfKit SessionKit](https://github.com/wharfkit/skill) if a host later signs Antelope legs. Prefer official bridge docs for EVM / Sui / NEAR / TON / Solana deposit addresses.
