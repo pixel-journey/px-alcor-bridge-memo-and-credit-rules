@@ -12,24 +12,29 @@
 | Telos memo | user id is the prefix before the first `|` |
 | Route hops | non-Telos ↔ non-Telos inserts `telos` |
 | Forward fee | `fee * 10000 ≤ amount * 100` (≤ 1%) |
+| Factory memo | text triple / 108 digits / `topup`; suffix and nick rules |
+| Legacy `EOS…` key | refused |
+| Under-fee | `quantity >= fee` |
 
 ## Not closed (production)
 
 | Concern | Guidance |
 | --- | --- |
-| Live routes / min / max | Read `GET /v1/routes` and `least` from the deposit-address response |
-| Vault / withdraw contract addresses | Read `GET /v1/chains`; do not hardcode from a blog post |
-| EVM deposit signing | Official bridge bot docs — not this lab |
-| Memo as auth | **Never.** Memo is a routing tag to tell users apart |
-| Wrong network deposit | Docs: Arbitrum / Base / Tron may lose funds |
+| Live routes / min / max / fees | Read API + chain `fees` table |
+| Base58 key checksum | Official factory verifies; this lab only checks prefix |
+| Name availability | `get_account` must fail before create |
+| Vault / withdraw addresses | `GET /v1/chains`; do not hardcode |
+| Memo as auth | **Never.** Routing tag only |
+| Wrong network deposit | Arbitrum / Base / Tron may lose funds |
 
 ## Attack angles
 
 1. Crediting a fake notify that is not from `bridge.alcor`.  
-2. Crediting a transfer of a look-alike token on another contract.  
-3. Treating the deposit-address memo as a signed claim.  
+2. Crediting a look-alike token on another contract.  
+3. Treating the deposit-address or factory memo as a signed claim.  
 4. Showing an Arbitrum QR for an Ethereum-only address.  
-5. Refusing the bridge payout in a contract `on_notify` (returned to the deposit address / held).
+5. Shipping private keys in a factory memo prompt.  
+6. Hardcoding a sample fee as market truth.
 
 ## Honesty limits
 
