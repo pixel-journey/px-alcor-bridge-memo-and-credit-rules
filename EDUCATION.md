@@ -29,9 +29,31 @@ Anyone can notify your contract of a transfer of a fake token. Check:
 
 Never fail the bridge transfer in `on_notify`: a refused payout goes back to the deposit address and waits for support.
 
+## Account factory (locked pure shape)
+
+Factories create an account from **one transfer** ([docs](https://docs.alcor.exchange/developers-api/account-factory)):
+
+| Chain | Contract | Name form |
+| --- | --- | --- |
+| Telos | `ac` | `<nick>.ac` |
+| WAX | `al` | `<nick>.al` |
+| XPR | `ac.alcor` | plain 4–12 chars |
+
+Memo forms this lab parses:
+
+- Text: `<account>:<owner key>:<active key>` (tail after `|` ignored)
+- Exactly **108 digits** (exchange-safe form)
+- Exactly `topup` (refills factory reserve; creates nothing)
+
+Refused: missing suffix, dotted nick, legacy `EOS…` keys, numeric memo ≠ 108 digits.
+
+Under-fee: `depositCoversFactoryFee(quantity, fee)` requires `quantity >= fee`. **Fee is an argument** — production code must read the live `fees` table; sample numbers in tests are not market truth.
+
+Not locked here: base58 checksum, `get_account` name free, live fee rows, deposit-address `leg` hashing.
+
 ## Host checklist (when leaving pure lab)
 
-1. `POST https://telos.alcor.exchange/api/bridge/v1/deposit-addresses` with `chain`, `to`, optional `memo`.
+1. `POST https://telos.alcor.exchange/api/bridge/v1/deposit-addresses` with `chain`, `to`, optional `memo` (or `leg` for factory).
 2. Show only networks listed for that address — not Arbitrum / Base / Tron unless listed.
 3. Display live `least` minimum from the response; do not hardcode.
 4. Watch history / Hyperion / SessionKit for transfer from **`bridge.alcor`**.
@@ -39,29 +61,23 @@ Never fail the bridge transfer in `on_notify`: a refused payout goes back to the
 6. Prefer [WharfKit skill](https://github.com/wharfkit/skill) for Antelope legs.
 7. Market prices are a different surface (Alcor **v3** market APIs) — not this lab.
 
-## Account factory (not locked in this repo)
-
-Alcor also documents **account factories** (`ac` on Telos, `al` on WAX, `ac.alcor` on XPR) that create an account from one transfer, including bridged tokens via deposit addresses. That is a separate product surface ([Account factory](https://docs.alcor.exchange/developers-api/account-factory)). This lab does **not** parse factory memos or under-fee deposits. Do not invent those tests here without a new pure rule.
-
 ## Memo contrast
 
 | Product | Memo role |
 | --- | --- |
-| This bridge lab | Routing tag to tell users apart |
+| Bridge deposit address | Routing tag to tell users apart |
+| Account factory | Nick + keys (or 108 digits) / `topup` |
 | [px-memo-action-router](https://github.com/pixel-journey/px-memo-action-router) | `action` / `action:payload` grammar for dapp routing |
 | ORNG stake top-up | Teaching memos `deposit` / `stake` — different product |
-| Account factory | Nick + keys (or digit form) as deposit / `leg` memo — upstream docs |
 
 Never use any of these memo strings as an **inline action name**.
 
 ## Masterclass (not in this repo)
 
-- Live `POST https://telos.alcor.exchange/api/bridge/v1/deposit-addresses`
+- Live `POST` deposit-addresses and factory `leg`
 - SSE streams for pending → delivered
 - EVM vault contracts and withdrawal release proofs
-- Account factory create-from-deposit
+- Base58 checksum and on-chain fee table reads
 - Cross-chain **swap** (home page) that combines bridge + AMM in one user signature
-
-Those are documented upstream. This lab only locks the pure checks an app must get right before it trusts a credit.
 
 Curriculum index (private vault): `px-contract-examples-vault` → `docs/ALCOR-BRIDGE.md`.
