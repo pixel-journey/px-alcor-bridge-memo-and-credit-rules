@@ -4,9 +4,11 @@
  * Sources of truth for live behavior:
  *   https://docs.alcor.exchange/api/bridge
  *   https://telos.alcor.exchange/api/bridge/docs
+ *   https://docs.alcor.exchange/developers-api/account-factory
  *
  * This module does not call the bridge API, does not sign, and does not
  * invent contract addresses beyond the documented account names.
+ * Live fees change — always re-read the chain `fees` table before sending.
  */
 
 /** Payout destination chains for deposit-address API (`chain` field). */
@@ -48,6 +50,24 @@ export const BRIDGE_ACCOUNT = "bridge.alcor";
 /** Legacy WAX USDT (IBC era). Prefer wrap.alcor. */
 export const LEGACY_USDT_CONTRACT = "usdt.alcor";
 
+/**
+ * Account factories (official docs). Same contract shape per network.
+ * Fees change — teaching constants below are samples, not market truth.
+ */
+export const FACTORY_BY_CHAIN = {
+  telos: { contract: "ac", suffix: ".ac", minNick: 1, maxNick: 9 },
+  wax: { contract: "al", suffix: ".al", minNick: 1, maxNick: 9 },
+  xpr: { contract: "ac.alcor", suffix: "", minNick: 4, maxNick: 12 },
+} as const;
+
+export type FactoryChain = keyof typeof FACTORY_BY_CHAIN;
+
+/** a-z and 1-5 only (Antelope name charset for the nick). */
+const NICK_RE = /^[a-z1-5]+$/;
+
+/** Modern public-key prefixes the factory accepts. Legacy EOS… is refused. */
+const KEY_PREFIX_RE = /^PUB_(K1|R1|WA)_/;
+
 export type CreditSignal = {
   from: string;
   to: string;
@@ -62,6 +82,20 @@ export type CreditDecision =
   | { ok: true; userMemo: string; canonical: boolean }
   | { ok: false; reason: string };
 
+export type FactoryMemoParse =
+  | { kind: "topup" }
+  | { kind: "numeric"; digits: string }
+  | {
+      kind: "text";
+      account: string;
+      ownerKey: string;
+      activeKey: string;
+    };
+
+export type FactoryMemoDecision =
+  | { ok: true; parsed: FactoryMemoParse }
+  | { ok: false; reason: string };
+
 export function isPayoutChain(s: string): s is PayoutChain {
   return (PAYOUT_CHAINS as readonly string[]).includes(s);
 }
@@ -74,6 +108,10 @@ export function isUnsupportedDepositNetwork(s: string): boolean {
   return (UNSUPPORTED_DEPOSIT_NETWORKS as readonly string[]).includes(
     s.toLowerCase(),
   );
+}
+
+export function isFactoryChain(s: string): s is FactoryChain {
+  return Object.prototype.hasOwnProperty.call(FACTORY_BY_CHAIN, s);
 }
 
 /** Validate the optional memo passed to POST /v1/deposit-addresses. */
@@ -166,4 +204,117 @@ export function feeWithinCap(amount: bigint, fee: bigint): boolean {
   if (amount <= 0n) throw new Error("amount must be positive");
   if (fee < 0n) throw new Error("fee must be non-negative");
   return fee * 10000n <= amount * BigInt(maxForwardFeeBps());
+}
+
+/**
+ * Parse an account-factory memo (text or 108-digit form).
+ * Anything after the first `|` is ignored (docs).
+ * Does not verify base58 checksums or on-chain name availability.
+ */
+export function parseFactoryMemo(
+  chain: FactoryChain,
+  rawMemo: string,
+): FactoryMemoDecision {
+  if (!isFactoryChain(chain)) return { ok: false, reason: "bad factory chain" };
+  if (typeof rawMemo !== "string") {
+    return { ok: false, reason: "memo must be a string" };
+  }
+
+  const memo = rawMemo.includes("|")
+    ? rawMemo.slice(0, rawMemo.indexOf("|"))
+    : rawMemo;
+
+  if (memo === "topup") return { ok: true, parsed: { kind: "topup" } };
+
+  if (/^\d+$/.test(memo)) {
+    if (memo.length !== 108) {
+      return { ok: false, reason: "numeric memo must be 108 digits" };
+    }
+    return { ok: true, parsed: { kind: "numeric", digits: memo } };
+  }
+
+  const parts = memo.split(":");
+  if (parts.length < 3) {
+    return {
+      ok: false,
+      reason: "memo must be <account>:<owner key>:<active key>",
+    };
+  }
+  const [account, ownerKey, activeKey] = parts;
+  if (!account || !ownerKey || !activeKey) {
+    return {
+      ok: false,
+      reason: "memo must be <account>:<owner key>:<active key>",
+    };
+  }
+
+  const cfg = FACTORY_BY_CHAIN[chain];
+  if (account.length > 12) {
+    return { ok: false, reason: "account name is longer than 12 characters" };
+  }
+
+  if (cfg.suffix) {
+    if (!account.endsWith(cfg.suffix)) {
+      return {
+        ok: false,
+        reason: `account name must end with ${cfg.suffix}`,
+      };
+    }
+    const nick = account.slice(0, -cfg.suffix.length);
+    if (nick.includes(".")) {
+      return { ok: false, reason: "nick cannot contain a dot" };
+    }
+    if (
+      nick.length < cfg.minNick ||
+      nick.length > cfg.maxNick ||
+      !NICK_RE.test(nick)
+    ) {
+      return { ok: false, reason: "nick has bad length or charset" };
+    }
+  } else {
+    // XPR: plain names, 4–12, no dot
+    if (account.includes(".")) {
+      return { ok: false, reason: "nick cannot contain a dot" };
+    }
+    if (
+      account.length < cfg.minNick ||
+      account.length > cfg.maxNick ||
+      !NICK_RE.test(account)
+    ) {
+      return { ok: false, reason: "nick has bad length or charset" };
+    }
+  }
+
+  for (const key of [ownerKey, activeKey]) {
+    if (key.startsWith("EOS")) {
+      return {
+        ok: false,
+        reason: "legacy EOS… key refused; convert to PUB_K1_",
+      };
+    }
+    if (!KEY_PREFIX_RE.test(key)) {
+      return {
+        ok: false,
+        reason: "key must be PUB_K1_, PUB_R1_ or PUB_WA_",
+      };
+    }
+  }
+
+  return {
+    ok: true,
+    parsed: { kind: "text", account, ownerKey, activeKey },
+  };
+}
+
+/**
+ * Teaching under-fee gate. `fee` must come from the live `fees` table in production.
+ * Quantity must be at least the fee; the remainder lands on the new account.
+ */
+export function depositCoversFactoryFee(
+  quantity: bigint,
+  fee: bigint,
+): boolean {
+  if (quantity < 0n) throw new Error("quantity must be non-negative");
+  if (fee < 0n) throw new Error("fee must be non-negative");
+  return quantity >= fee;
 }
