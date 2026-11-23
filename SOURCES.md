@@ -4,16 +4,12 @@
 | --- | --- |
 | [Bridge API](https://docs.alcor.exchange/api/bridge) | Deposit addresses, streams, contracts overview |
 | [Bridge API /docs](https://telos.alcor.exchange/api/bridge/docs) | Full agent-oriented reference |
-| [Bridge /docs/bot](https://telos.alcor.exchange/api/bridge/docs/bot) | Signing on each chain |
 | [OpenAPI](https://telos.alcor.exchange/api/bridge/openapi.yaml) | Machine schema |
-| [Bridge product page](https://docs.alcor.exchange/main-page-overview/bridge) | Hub model, timing table |
-| [Deposit and Withdraw](https://docs.alcor.exchange/main-page-overview/deposit-and-withdraw) | Exchange deposit UX |
+| [Account factory](https://docs.alcor.exchange/developers-api/account-factory) | Memo forms, fees table, refusals |
+| [for-projects](https://docs.alcor.exchange/for-projects) | Deposit / factory / llms.txt entry |
 | [USDT on WAX](https://docs.alcor.exchange/alcor-usdt-proxy) | `USDT@wrap.alcor` vs legacy `USDT@usdt.alcor` |
 | [Alcor API index](https://docs.alcor.exchange/api) | v2 still hosted; v3 for market data |
-| [Market Feed v3](https://docs.alcor.exchange/api/feed) | Cross-chain feed shape (not used by this lab) |
-| [Analytics v3](https://docs.alcor.exchange/api/analytics) | TVL / volume lists (not used by this lab) |
 | [wharfkit/skill](https://github.com/wharfkit/skill) | SessionKit if a host signs Antelope legs |
-| [atomic-knowledge](https://github.com/atomicassets/atomic-knowledge) | Boundary: NFT product, not bridge |
 
 ## Product facts locked by tests
 
@@ -23,8 +19,13 @@
 - Telos user memo is the prefix before `|`.
 - `routeHops("bsc","wax")` → `["bsc","telos","wax"]`.
 - Forward fee ≤ 100 bps of amount.
+- Unsupported teaching networks: arbitrum, base, tron, optimism.
+- Factory contracts: `ac` / `al` / `ac.alcor`.
+- Factory memo: text triple, 108 digits, or `topup`; tail after `|` ignored.
+- Legacy `EOS…` keys refused; `PUB_K1_` / `PUB_R1_` / `PUB_WA_` prefixes only (checksum not verified here).
+- Under-fee: quantity must be ≥ fee (fee argument is caller-supplied).
 
-Live mins, maxes, and addresses change. Re-read the API; do not pin them in this repo.
+Live mins, maxes, fees, and addresses change. Re-read the API and `fees` table; do not pin them in this repo.
 
 ## Suggested GitHub topics
 
