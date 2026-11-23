@@ -156,7 +156,6 @@ export function decideBridgeCredit(
     return { ok: false, reason: "memo mismatch" };
   }
 
-  // System coin may use the chain token contract; bridged assets use wrap.alcor.
   const bridgedSymbols = new Set([
     "USDC",
     "USDT",
@@ -272,7 +271,6 @@ export function parseFactoryMemo(
       return { ok: false, reason: "nick has bad length or charset" };
     }
   } else {
-    // XPR: plain names, 4–12, no dot
     if (account.includes(".")) {
       return { ok: false, reason: "nick cannot contain a dot" };
     }
@@ -317,4 +315,16 @@ export function depositCoversFactoryFee(
   if (quantity < 0n) throw new Error("quantity must be non-negative");
   if (fee < 0n) throw new Error("fee must be non-negative");
   return quantity >= fee;
+}
+
+/**
+ * Amount that lands on the new account after the factory fee.
+ * Returns null when the deposit does not cover the fee (nothing is created).
+ */
+export function factoryRemainderAfterFee(
+  quantity: bigint,
+  fee: bigint,
+): bigint | null {
+  if (!depositCoversFactoryFee(quantity, fee)) return null;
+  return quantity - fee;
 }
