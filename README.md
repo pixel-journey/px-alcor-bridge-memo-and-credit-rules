@@ -8,15 +8,17 @@ Educational pure TypeScript for **Alcor Bridge** integration patterns:
 - **wrap.alcor** vs legacy `usdt.alcor`
 - **Telos hub** route hops
 - forward fee ceiling **≤ 1%**
+- **account factory** memo parse (`ac` / `al` / `ac.alcor`): text form, 108-digit form, `topup`, legacy `EOS…` key refused
+- under-fee gate: quantity must be ≥ fee (fee from live table in production)
 
 ```bash
 npm test
 ```
 
-This is **not** a live bridge client. It does not call `POST /v1/deposit-addresses`, does not sign, and does not invent vault addresses. Live API: [docs.alcor.exchange/api/bridge](https://docs.alcor.exchange/api/bridge). Agent-oriented reference: [telos.alcor.exchange/api/bridge/docs](https://telos.alcor.exchange/api/bridge/docs).
+This is **not** a live bridge client. It does not call `POST /v1/deposit-addresses`, does not sign, does not verify base58 checksums, and does not invent vault addresses. Live API: [docs.alcor.exchange/api/bridge](https://docs.alcor.exchange/api/bridge). Factory: [account-factory](https://docs.alcor.exchange/developers-api/account-factory).
 
 Curriculum index (private vault): `px-contract-examples-vault` → `docs/ALCOR-BRIDGE.md`.
 
-Prefer [WharfKit SessionKit skill](https://github.com/wharfkit/skill) if a host later signs Antelope legs. Prefer official bridge docs for EVM / Sui / NEAR / TON / Solana deposit addresses. Market data (v2 still hosted; v3 recommended for new reads) is a different surface — see vault `docs/ALCOR-API.md`.
+Prefer [WharfKit SessionKit skill](https://github.com/wharfkit/skill) if a host later signs Antelope legs. Market data (v2 still hosted; v3 recommended for new reads) is a different surface — see vault `docs/ALCOR-API.md`.
 
 **Topics (when empty):** `antelope` `education` `pixel-journey` `alcor` `bridge` `cross-chain`
