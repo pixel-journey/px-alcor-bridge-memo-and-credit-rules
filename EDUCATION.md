@@ -29,6 +29,26 @@ Anyone can notify your contract of a transfer of a fake token. Check:
 
 Never fail the bridge transfer in `on_notify`: a refused payout goes back to the deposit address and waits for support.
 
+## Host checklist (when leaving pure lab)
+
+1. `POST https://telos.alcor.exchange/api/bridge/v1/deposit-addresses` with `chain`, `to`, optional `memo`.
+2. Show only networks listed for that address — not Arbitrum / Base / Tron unless listed.
+3. Display live `least` minimum from the response; do not hardcode.
+4. Watch history / Hyperion / SessionKit for transfer from **`bridge.alcor`**.
+5. Credit only after memo match + contract checks; never treat memo as authorization.
+6. Prefer [WharfKit skill](https://github.com/wharfkit/skill) for Antelope legs.
+7. Market prices are a different surface (Alcor **v3** market APIs) — not this lab.
+
+## Memo contrast
+
+| Product | Memo role |
+| --- | --- |
+| This bridge lab | Routing tag to tell users apart |
+| [px-memo-action-router](https://github.com/pixel-journey/px-memo-action-router) | `action` / `action:payload` grammar for dapp routing |
+| ORNG stake top-up | Teaching memos `deposit` / `stake` — different product |
+
+Never use any of these memo strings as an **inline action name**.
+
 ## Masterclass (not in this repo)
 
 - Live `POST https://telos.alcor.exchange/api/bridge/v1/deposit-addresses`
@@ -37,3 +57,5 @@ Never fail the bridge transfer in `on_notify`: a refused payout goes back to the
 - Cross-chain **swap** (home page) that combines bridge + AMM in one user signature
 
 Those are documented upstream. This lab only locks the pure checks an app must get right before it trusts a credit.
+
+Curriculum index (private vault): `px-contract-examples-vault` → `docs/ALCOR-BRIDGE.md`.
