@@ -4,6 +4,7 @@ import {
   assertDepositMemo,
   decideBridgeCredit,
   depositCoversFactoryFee,
+  factoryRemainderAfterFee,
   feeWithinCap,
   isUnsupportedDepositNetwork,
   parseFactoryMemo,
@@ -122,6 +123,8 @@ describe("parseFactoryMemo", () => {
     "PUB_K1_6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV";
   const k1b =
     "PUB_K1_5b3z7Y1q9exampleActiveKeyForTeachingOnlyxxxxxx";
+  const r1 = "PUB_R1_exampleTeachingKeyNotChecksumVerifiedxx";
+  const wa = "PUB_WA_exampleTeachingKeyNotChecksumVerifiedxx";
 
   it("parses Telos text form and strips tail after |", () => {
     const d = parseFactoryMemo(
@@ -136,10 +139,12 @@ describe("parseFactoryMemo", () => {
   });
 
   it("parses WAX .al and XPR plain names", () => {
-    const wax = parseFactoryMemo("wax", `vasya.al:${k1}:${k1b}`);
-    assert.equal(wax.ok, true);
-    const xpr = parseFactoryMemo("xpr", `vasya:${k1}:${k1b}`);
-    assert.equal(xpr.ok, true);
+    assert.equal(parseFactoryMemo("wax", `vasya.al:${k1}:${k1b}`).ok, true);
+    assert.equal(parseFactoryMemo("xpr", `vasya:${k1}:${k1b}`).ok, true);
+  });
+
+  it("accepts PUB_R1_ and PUB_WA_ prefixes", () => {
+    assert.equal(parseFactoryMemo("telos", `vasya.ac:${r1}:${wa}`).ok, true);
   });
 
   it("accepts topup and 108-digit numeric memos", () => {
@@ -150,21 +155,31 @@ describe("parseFactoryMemo", () => {
     if (n.ok) assert.equal(n.parsed.kind, "numeric");
   });
 
-  it("refuses bad nick, suffix, legacy EOS key, short numeric", () => {
-    assert.equal(
-      parseFactoryMemo("telos", `vasya:${k1}:${k1b}`).ok,
-      false,
-    );
-    assert.equal(
-      parseFactoryMemo("telos", `a.b.ac:${k1}:${k1b}`).ok,
-      false,
-    );
+  it("refuses official shape errors from the docs", () => {
+    // missing suffix
+    assert.equal(parseFactoryMemo("telos", `vasya:${k1}:${k1b}`).ok, false);
+    // nick contains a dot
+    assert.equal(parseFactoryMemo("telos", `a.b.ac:${k1}:${k1b}`).ok, false);
+    // legacy EOS key
     assert.equal(
       parseFactoryMemo("telos", `vasya.ac:EOS6MRy…:${k1b}`).ok,
       false,
     );
+    // short / empty / non-108 numeric
     assert.equal(parseFactoryMemo("telos", "12345").ok, false);
     assert.equal(parseFactoryMemo("telos", "").ok, false);
+    // uppercase / 0 / 6-9 not in nick charset
+    assert.equal(parseFactoryMemo("telos", `Vasya.ac:${k1}:${k1b}`).ok, false);
+    assert.equal(parseFactoryMemo("telos", `v0sya.ac:${k1}:${k1b}`).ok, false);
+    assert.equal(parseFactoryMemo("telos", `v6sya.ac:${k1}:${k1b}`).ok, false);
+    // longer than 12 characters
+    assert.equal(
+      parseFactoryMemo("telos", `abcdefghij.ac:${k1}:${k1b}`).ok,
+      false,
+    );
+    // XPR too short (<4) and dotted plain name
+    assert.equal(parseFactoryMemo("xpr", `abc:${k1}:${k1b}`).ok, false);
+    assert.equal(parseFactoryMemo("xpr", `ab.cd:${k1}:${k1b}`).ok, false);
   });
 
   it("exposes factory contracts from FACTORY_BY_CHAIN", () => {
@@ -174,11 +189,16 @@ describe("parseFactoryMemo", () => {
   });
 });
 
-describe("depositCoversFactoryFee", () => {
+describe("depositCoversFactoryFee and remainder", () => {
   it("requires quantity >= fee (teaching amounts)", () => {
-    // Sample docs figures — not live table values.
     assert.equal(depositCoversFactoryFee(3_00000000n, 2_00000000n), true);
     assert.equal(depositCoversFactoryFee(1_99999999n, 2_00000000n), false);
     assert.equal(depositCoversFactoryFee(2_00000000n, 2_00000000n), true);
+  });
+
+  it("remainder is quantity - fee or null when under-fee", () => {
+    assert.equal(factoryRemainderAfterFee(3_00000000n, 2_00000000n), 1_00000000n);
+    assert.equal(factoryRemainderAfterFee(2_00000000n, 2_00000000n), 0n);
+    assert.equal(factoryRemainderAfterFee(1_99999999n, 2_00000000n), null);
   });
 });
