@@ -4,7 +4,7 @@
 
 Alcor Bridge lets a user send USDT (or other listed assets) from Ethereum, BSC, Polygon, Sui, NEAR, TON, Solana, or another Antelope chain, and receive a payout on **Telos, WAX, XPR, or Vaulta**.
 
-**Telos is the hub.** A trip from BSC to WAX still goes through Telos. The user usually signs once on the starting network.
+**Telos is the hub.** A trip from BSC to WAX still goes through Telos. The user usually signs once on the starting network. `hop.alcor` on Telos carries some hub legs; apps that only **receive** on WAX still credit a transfer from `bridge.alcor` to their account.
 
 For apps, the usual pattern is:
 
@@ -39,6 +39,10 @@ Never fail the bridge transfer in `on_notify`: a refused payout goes back to the
 6. Prefer [WharfKit skill](https://github.com/wharfkit/skill) for Antelope legs.
 7. Market prices are a different surface (Alcor **v3** market APIs) — not this lab.
 
+## Account factory (not locked in this repo)
+
+Alcor also documents **account factories** (`ac` on Telos, `al` on WAX, `ac.alcor` on XPR) that create an account from one transfer, including bridged tokens via deposit addresses. That is a separate product surface ([Account factory](https://docs.alcor.exchange/developers-api/account-factory)). This lab does **not** parse factory memos or under-fee deposits. Do not invent those tests here without a new pure rule.
+
 ## Memo contrast
 
 | Product | Memo role |
@@ -46,6 +50,7 @@ Never fail the bridge transfer in `on_notify`: a refused payout goes back to the
 | This bridge lab | Routing tag to tell users apart |
 | [px-memo-action-router](https://github.com/pixel-journey/px-memo-action-router) | `action` / `action:payload` grammar for dapp routing |
 | ORNG stake top-up | Teaching memos `deposit` / `stake` — different product |
+| Account factory | Nick + keys (or digit form) as deposit / `leg` memo — upstream docs |
 
 Never use any of these memo strings as an **inline action name**.
 
@@ -54,6 +59,7 @@ Never use any of these memo strings as an **inline action name**.
 - Live `POST https://telos.alcor.exchange/api/bridge/v1/deposit-addresses`
 - SSE streams for pending → delivered
 - EVM vault contracts and withdrawal release proofs
+- Account factory create-from-deposit
 - Cross-chain **swap** (home page) that combines bridge + AMM in one user signature
 
 Those are documented upstream. This lab only locks the pure checks an app must get right before it trusts a credit.
