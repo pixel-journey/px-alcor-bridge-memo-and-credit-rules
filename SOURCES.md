@@ -22,8 +22,9 @@
 - Unsupported teaching networks: arbitrum, base, tron, optimism.
 - Factory contracts: `ac` / `al` / `ac.alcor`.
 - Factory memo: text triple, 108 digits, or `topup`; tail after `|` ignored.
+- Nick charset a–z + 1–5; no uppercase / 0 / 6–9; max 12-char account; XPR ≥4 plain.
 - Legacy `EOS…` keys refused; `PUB_K1_` / `PUB_R1_` / `PUB_WA_` prefixes only (checksum not verified here).
-- Under-fee: quantity must be ≥ fee (fee argument is caller-supplied).
+- Under-fee: quantity ≥ fee; remainder = quantity − fee or null.
 
 Live mins, maxes, fees, and addresses change. Re-read the API and `fees` table; do not pin them in this repo.
 
